@@ -1,0 +1,92 @@
+[
+  {
+    "stop": 1,
+    "file": "content/photos/01.jpg",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:%D0%91%D0%B5%D0%BB%D0%BE%D1%80%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9_%D0%B2%D0%BE%D0%BA%D0%B7%D0%B0%D0%BB._%D0%B4%D0%B5%D0%BA%D0%B0%D0%B1%D1%80%D1%8C_2024.jpg",
+    "artist": "Kotofey2016 / Википедия",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f3/%D0%91%D0%B5%D0%BB%D0%BE%D1%80%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9_%D0%B2%D0%BE%D0%BA%D0%B7%D0%B0%D0%BB._%D0%B4%D0%B5%D0%BA%D0%B0%D0%B1%D1%80%D1%8C_2024.jpg/1280px-%D0%91%D0%B5%D0%BB%D0%BE%D1%80%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9_%D0%B2%D0%BE%D0%BA%D0%B7%D0%B0%D0%BB._%D0%B4%D0%B5%D0%BA%D0%B0%D0%B1%D1%80%D1%8C_2024.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  },
+  {
+    "stop": 2,
+    "file": "content/photos/02.jpg",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:Moscow_MiusskoeTramDepot_1687.jpg",
+    "artist": "Ludvig14",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c2/Moscow_MiusskoeTramDepot_1687.jpg/1280px-Moscow_MiusskoeTramDepot_1687.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  },
+  {
+    "stop": 3,
+    "file": "content/photos/03.jpg",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:Moscow_BakhmetevskyGarage_191_8187.jpg",
+    "artist": "Ludvig14",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/15/Moscow_BakhmetevskyGarage_191_8187.jpg/1280px-Moscow_BakhmetevskyGarage_191_8187.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  },
+  {
+    "stop": 4,
+    "file": "content/photos/04.jpg",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:Moscow,_Triumfalnaya_Square_immediately_after_the_2016_reconstruction_(31391621615).jpg",
+    "artist": "Gennady Grachev from Moscow, Russia",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0",
+    "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/99/Moscow%2C_Triumfalnaya_Square_immediately_after_the_2016_reconstruction_%2831391621615%29.jpg/1280px-Moscow%2C_Triumfalnaya_Square_immediately_after_the_2016_reconstruction_%2831391621615%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  },
+  {
+    "stop": 5,
+    "file": "content/photos/05.jpg",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:Tverskaya13_Moscow_06-2015.jpg",
+    "artist": "A.Savin",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/17/Tverskaya13_Moscow_06-2015.jpg/1280px-Tverskaya13_Moscow_06-2015.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  },
+  {
+    "stop": 6,
+    "file": "content/photos/06.jpg",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:7244._Bolshoy_Kamenny_Bridge_across_the_Moskva_River.jpg",
+    "artist": "GAlexandrova",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bf/7244._Bolshoy_Kamenny_Bridge_across_the_Moskva_River.jpg/1280px-7244._Bolshoy_Kamenny_Bridge_across_the_Moskva_River.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  },
+  {
+    "stop": 7,
+    "file": "content/photos/07.jpg",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:Moscow_GES-2_014_7211.jpg",
+    "artist": "Ludvig14",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/24/Moscow_GES-2_014_7211.jpg/1280px-Moscow_GES-2_014_7211.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  },
+  {
+    "stop": 8,
+    "file": "content/photos/08.jpg",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:Metro_MSK_Line1_Kropotkinskaya.jpg",
+    "artist": "Алексей Фёдоров",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/90/Metro_MSK_Line1_Kropotkinskaya.jpg/1280px-Metro_MSK_Line1_Kropotkinskaya.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  },
+  {
+    "stop": 9,
+    "file": "content/photos/09.jpg",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:Biblioteka_imeni_Lenina_subway_1.jpg",
+    "artist": "Andrey Volykhov",
+    "license": "CC BY-SA 3.0",
+    "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+    "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/Biblioteka_imeni_Lenina_subway_1.jpg/1280px-Biblioteka_imeni_Lenina_subway_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  },
+  {
+    "stop": 10,
+    "file": "content/photos/10.jpg",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:MosMetro_Okhotny_Ryad_img1_asv2018-01.jpg",
+    "artist": "A.Savin",
+    "license": "FAL",
+    "license_url": "http://artlibre.org/licence/lal/en",
+    "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fd/MosMetro_Okhotny_Ryad_img1_asv2018-01.jpg/1280px-MosMetro_Okhotny_Ryad_img1_asv2018-01.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  }
+]

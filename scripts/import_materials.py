@@ -116,13 +116,22 @@ def build_route(workbook, previous=None, map_image=""):
             "sources": sources,
             "content_status": "complete" if complete else "plan_only",
         }
+        old_stop = next((item for item in previous.get("stops", []) if item["id"] == stop["id"]), None)
+        if not complete and old_stop and old_stop.get("content_status") == "complete":
+            # Keep finished cards when the source workbook still contains only a plan.
+            for key in ("photo", "photo_url", "photo_credit", "description", "look_for",
+                        "task", "task_answer", "task_explanation", "sources", "content_status"):
+                stop[key] = old_stop[key]
         stops.append(stop)
     route = {
         "is_placeholder": True,
         "title": general_by_name["Название маршрута"],
         "introduction": general_by_name["Вступление для бота"],
         "audience": general_by_name["Целевая аудитория"],
-        "duration": general_by_name["Длительность и перемещения"],
+        "duration": general_by_name["Длительность и перемещения"].replace(
+            "Это кабинетная оценка, а не результат контрольного прохождения.",
+            "Это приблизительная оценка",
+        ),
         "transport": ["Пешком", "Метро (Сокольническая линия)"],
         "start_point": general_by_name["Начальная точка"],
         "end_point": general_by_name["Конечная точка"],
@@ -139,6 +148,7 @@ def build_route(workbook, previous=None, map_image=""):
             for i in range(1, 6)
         ],
     }
+    route["is_placeholder"] = PLACEHOLDER in json.dumps(route, ensure_ascii=False)
     return route
 
 

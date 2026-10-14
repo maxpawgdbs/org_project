@@ -74,9 +74,16 @@ class RouteBot:
         ])
         if progress:
             rows.append([button("Начать маршрут заново", "start")])
-        notice = ("\n\nТехническая версия: часть карточек и вопросы викторины ещё ожидают материалов автора."
-                  if self.route.get("is_placeholder") else "")
-        self.send(chat_id, f"{self.route['title']}\n\n{self.route['introduction']}{notice}", rows)
+        self.send(chat_id, f"{self.route['title']}\n\n{self.route['introduction']}", rows)
+
+    def show_start_map(self, chat_id):
+        """Show the ten-stop overview before the /start welcome and menu."""
+        map_image = self.route.get("_map_image_path")
+        if map_image and map_image.is_file():
+            try:
+                self.api.send_photo(chat_id, map_image, f"Карта маршрута: {len(self.stops)} остановок")
+            except (BotAPIError, OSError) as exc:
+                LOG.warning("Route map image unavailable: %s", type(exc).__name__)
 
     def start_route(self, chat_id, user_id):
         self.store.start(user_id, self.stops[0]["id"])
@@ -118,19 +125,20 @@ class RouteBot:
         self.store.visit(user_id, stop["id"])
         photo_path = stop["_photo_path"]
         photo_ok = False
+        heading = f"{index + 1}. {stop['title']}"
         if photo_path and photo_path.is_file():
             try:
-                self.api.send_photo(chat_id, photo_path, f"{index + 1}. {stop['title']}"[:400])
+                self.api.send_photo(chat_id, photo_path, heading[:400])
                 photo_ok = True
             except (BotAPIError, OSError) as exc:
                 LOG.warning("Photo unavailable: %s", type(exc).__name__)
         if not photo_ok and stop.get("photo_url"):
             try:
-                self.api.send_photo(chat_id, stop["photo_url"], f"{index + 1}. {stop['title']}"[:400])
+                self.api.send_photo(chat_id, stop["photo_url"], heading[:400])
                 photo_ok = True
             except BotAPIError as exc:
                 LOG.warning("Remote photo unavailable: %s", type(exc).__name__)
-        lines = [f"{index + 1}. {stop['title']}", "", stop["description"], "",
+        lines = [heading, "", stop["description"], "",
                  "На что обратить внимание:", stop["look_for"]]
         if stop["task"]:
             lines.extend(["", "Вопрос или задание:", stop["task"]])
@@ -138,7 +146,7 @@ class RouteBot:
         if stop.get("visit_info"):
             lines.extend(["", "Место осмотра и доступ:", stop["visit_info"]])
         if stop["photo_credit"]:
-            lines.extend(["", "Фото: " + stop["photo_credit"]])
+            lines.extend(["", stop["photo_credit"]])
         if not photo_ok:
             lines.extend(["", "Фото временно недоступно."])
         if index + 1 < len(self.stops) and stop["next_transition"]:
@@ -173,14 +181,14 @@ class RouteBot:
         else:
             lines.append("\nИсточники пока не переданы автором.")
         if stop["photo_credit"]:
-            lines.append("\nФото: " + stop["photo_credit"])
+            lines.append("\n" + stop["photo_credit"])
         self.send(chat_id, "".join(lines), [[button("К остановке", f"stop:{index}")], [button("Главное меню", "menu")]])
 
     def show_map(self, chat_id):
         map_image = self.route.get("_map_image_path")
         if map_image and map_image.is_file():
             try:
-                self.api.send_photo(chat_id, map_image, "Предварительная схема маршрута")
+                self.api.send_photo(chat_id, map_image, f"Карта маршрута: {len(self.stops)} остановок")
             except (BotAPIError, OSError) as exc:
                 LOG.warning("Route map image unavailable: %s", type(exc).__name__)
         note = self.route.get("map_note") or "Общая карта маршрута."
@@ -275,6 +283,7 @@ class RouteBot:
             chat_id = message["chat"]["id"]
             user_id = message["from"]["id"]
             if message.get("text", "").split(maxsplit=1)[0:1] == ["/start"]:
+                self.show_start_map(chat_id)
                 self.main_menu(chat_id, user_id)
             else:
                 self.send(chat_id, "Выберите действие в главном меню.")

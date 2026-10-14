@@ -120,16 +120,54 @@ class BotTests(unittest.TestCase):
 
     def test_imported_materials_and_map_image(self):
         self.assertEqual(self.route["title"], "Москва в движении: от конки до метро")
-        self.assertEqual([s["content_status"] for s in self.route["stops"]].count("complete"), 1)
-        self.assertIn("[ТЕХНИЧЕСКАЯ ЗАГЛУШКА]", self.route["stops"][1]["description"])
+        self.assertEqual([s["content_status"] for s in self.route["stops"]].count("complete"), 10)
+        self.assertFalse(self.route["is_placeholder"])
+        self.assertTrue(all(s["_photo_path"].is_file() for s in self.route["stops"]))
+        self.assertTrue(all(s["task"] and s["task_answer"] for s in self.route["stops"]))
+        self.assertTrue(all("[ТЕХНИЧЕСКАЯ ЗАГЛУШКА]" not in s["description"] + s["look_for"] for s in self.route["stops"]))
+        self.assertTrue(all("[ТЕХНИЧЕСКАЯ ЗАГЛУШКА]" not in q["question"] + q["explanation"] for q in self.route["quiz"]))
         self.bot.show_stop(1, 1, 0)
         self.assertTrue(self.api.photos)
-        self.assertEqual(self.api.photos[-1][1], self.route["stops"][0]["photo_url"])
+        self.assertEqual(self.api.photos[-1][1], self.route["stops"][0]["_photo_path"])
+        heading = "1. " + self.route["stops"][0]["title"]
+        self.assertEqual(self.api.photos[-1][2], heading)
+        self.assertTrue(self.api.messages[0][1].startswith(heading + "\n"))
         self.bot.show_map(1)
         self.assertEqual(self.api.photos[-1][1], self.route["_map_image_path"])
         self.assertTrue(self.route["_map_image_path"].is_file())
+        map_buttons = [item for row in self.api.messages[-1][2] for item in row]
+        self.assertIn({"text": "Открыть карту", "url": self.route["map_url"]}, map_buttons)
         self.bot.show_task_answer(1, 0)
         self.assertIn("Чтобы помочь", self.api.messages[-1][1])
+
+    def test_start_sends_map_then_welcome(self):
+        update = {"message": {"chat": {"id": 1, "type": "private"},
+                              "from": {"id": 1}, "text": "/start"}}
+        self.bot.handle_update(update)
+        self.assertEqual(self.api.photos[-1][1], self.route["_map_image_path"])
+        self.assertIn("10 остановок", self.api.photos[-1][2])
+        self.assertTrue(self.api.messages[-1][1].startswith(self.route["title"]))
+        self.assertNotIn("Техническая версия", self.api.messages[-1][1])
+        self.assertIn("Карта маршрута", [item["text"] for row in self.api.messages[-1][2] for item in row])
+        self.api.fail_photo = True
+        self.bot.handle_update(update)
+        self.assertEqual(len(self.api.photos), 1)
+        self.assertTrue(self.api.messages[-1][1].startswith(self.route["title"]))
+
+    def test_all_stops_send_matching_photo_and_text_headings(self):
+        for index, stop in enumerate(self.route["stops"]):
+            before_messages = len(self.api.messages)
+            before_photos = len(self.api.photos)
+            self.bot.show_stop(1, 1, index)
+            heading = f"{index + 1}. {stop['title']}"
+            self.assertEqual(len(self.api.photos), before_photos + 1)
+            self.assertEqual(self.api.photos[-1][1], stop["_photo_path"])
+            self.assertEqual(self.api.photos[-1][2], heading)
+            text_parts = [item[1] for item in self.api.messages[before_messages:]]
+            self.assertTrue(text_parts[0].startswith(heading + "\n"))
+            self.assertIn(stop["description"], "".join(text_parts))
+            self.assertIn(stop["look_for"], "".join(text_parts))
+            self.assertIn(stop["photo_credit"], "".join(text_parts))
 
     def test_offset_persists(self):
         self.store.set_offset(123)

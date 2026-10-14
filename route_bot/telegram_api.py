@@ -61,7 +61,8 @@ class TelegramAPI:
         return self.call("answerCallbackQuery", {"callback_query_id": callback_id, "text": text})
 
     def get_updates(self, offset):
-        payload = {"timeout": 35, "allowed_updates": ["message", "callback_query"]}
+        # Keep long polling below common proxy timeouts (a 35-second wait failed here).
+        payload = {"timeout": 20, "allowed_updates": ["message", "callback_query"]}
         if offset is not None:
             payload["offset"] = offset
         return self.call("getUpdates", payload)
