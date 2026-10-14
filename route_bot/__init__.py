@@ -1,0 +1,1 @@
+"""Telegram walking route bot."""

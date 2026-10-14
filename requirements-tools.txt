@@ -1,0 +1,2 @@
+# Optional: only for generating the final QR image.
+qrcode[pil]==8.2
