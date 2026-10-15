@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from route_bot.bot import RouteBot, chunks, photo_caption, point_url
+from route_bot.bot import RouteBot, chunks, point_url, stop_caption, utf16_length
 from route_bot.content import load_route
 from route_bot.storage import ProgressStore
 from route_bot.telegram_api import BotAPIError
@@ -22,10 +22,10 @@ class FakeAPI:
     def send_message(self, chat_id, text, keyboard=None):
         self.messages.append((chat_id, text, keyboard))
 
-    def send_photo(self, chat_id, path, caption):
+    def send_photo(self, chat_id, path, caption, keyboard=None):
         if self.fail_photo:
             raise BotAPIError("unavailable")
-        self.photos.append((chat_id, path, caption))
+        self.photos.append((chat_id, path, caption, keyboard))
 
     def answer_callback(self, callback_id, text=""):
         self.callbacks.append(callback_id)
@@ -57,13 +57,15 @@ class BotTests(unittest.TestCase):
         self.assertIn("stop:0", buttons)
         self.assertIn("stop:9", buttons)
         self.bot.show_stop(1, 1, 0)
-        first = [button["text"] for row in self.api.messages[-1][2] for button in row]
+        first = [button["text"] for row in self.api.photos[-1][3] for button in row]
         self.assertIn("Далее", first)
         self.assertNotIn("Назад", first)
         self.bot.show_stop(1, 1, 9)
-        last = [button["text"] for row in self.api.messages[-2][2] for button in row]
+        last = [button["text"] for row in self.api.photos[-1][3] for button in row]
         self.assertIn("Назад", last)
         self.assertNotIn("Далее", last)
+        self.assertIn("Завершить маршрут", last)
+        self.bot.handle_update(callback(1, "finish"))
         self.assertIn("Финальная викторина", [button["text"] for row in self.api.messages[-1][2] for button in row])
 
     def test_two_users_and_restart(self):
@@ -87,11 +89,20 @@ class BotTests(unittest.TestCase):
         self.api.fail_photo = True
         self.bot.show_stop(1, 1, 0)
         combined = "".join(message[1] for message in self.api.messages)
-        self.assertIn("Слово " * 1500, combined)
+        self.assertEqual(len(self.api.messages), 1)
+        self.assertIn("Слово", combined)
         self.assertIn("Фото временно недоступно", combined)
-        self.assertTrue(all(len(message[1]) <= 3500 for message in self.api.messages))
+        self.assertLessEqual(len(combined), 1100)
         self.assertIsNotNone(self.api.messages[-1][2])
         self.assertEqual("".join(chunks("a" * 9000)), "a" * 9000)
+
+    def test_missing_local_photo_uses_remote_in_one_message(self):
+        self.route["stops"][0]["_photo_path"] = Path(self.tmp.name) / "missing.jpg"
+        self.bot.show_stop(1, 1, 0)
+        self.assertEqual(len(self.api.photos), 1)
+        self.assertEqual(self.api.photos[0][1], self.route["stops"][0]["photo_url"])
+        self.assertEqual(self.api.messages, [])
+        self.assertIsNotNone(self.api.photos[0][3])
 
     def test_quiz_duplicate_answer_and_result(self):
         self.bot.start_quiz(1, 101)
@@ -130,8 +141,9 @@ class BotTests(unittest.TestCase):
         self.assertTrue(self.api.photos)
         self.assertEqual(self.api.photos[-1][1], self.route["stops"][0]["_photo_path"])
         heading = "1. " + self.route["stops"][0]["title"]
-        self.assertEqual(self.api.photos[-1][2], heading + "\n\n" + self.route["stops"][0]["description"])
-        self.assertTrue(self.api.messages[0][1].startswith("На что обратить внимание:"))
+        self.assertTrue(self.api.photos[-1][2].startswith(heading + "\n\n"))
+        self.assertIn("На что обратить внимание:", self.api.photos[-1][2])
+        self.assertEqual(self.api.messages, [])
         self.bot.show_map(1)
         self.assertEqual(self.api.photos[-1][1], self.route["_map_image_path"])
         self.assertTrue(self.route["_map_image_path"].is_file())
@@ -154,7 +166,7 @@ class BotTests(unittest.TestCase):
         self.assertEqual(len(self.api.photos), 1)
         self.assertTrue(self.api.messages[-1][1].startswith(self.route["title"]))
 
-    def test_all_stops_send_complete_description_with_photo(self):
+    def test_all_stops_send_one_photo_card_with_navigation(self):
         for index, stop in enumerate(self.route["stops"]):
             before_messages = len(self.api.messages)
             before_photos = len(self.api.photos)
@@ -162,19 +174,23 @@ class BotTests(unittest.TestCase):
             heading = f"{index + 1}. {stop['title']}"
             self.assertEqual(len(self.api.photos), before_photos + 1)
             self.assertEqual(self.api.photos[-1][1], stop["_photo_path"])
-            self.assertEqual(self.api.photos[-1][2], heading + "\n\n" + stop["description"])
-            self.assertLessEqual(len(self.api.photos[-1][2].encode("utf-16-le")) // 2, 1024)
-            text_parts = [item[1] for item in self.api.messages[before_messages:]]
-            self.assertTrue(text_parts[0].startswith("На что обратить внимание:"))
-            self.assertIn(stop["look_for"], "".join(text_parts))
-            self.assertIn(stop["photo_credit"], "".join(text_parts))
+            caption = self.api.photos[-1][2]
+            self.assertTrue(caption.startswith(heading + "\n\n"))
+            self.assertLessEqual(utf16_length(caption), 1024)
+            for label in ("На что обратить внимание:", "Задание:", "Адрес:", "Фото:"):
+                self.assertIn(label, caption)
+            if index < len(self.route["stops"]) - 1:
+                self.assertIn("Далее:", caption)
+            self.assertEqual(len(self.api.messages), before_messages)
+            self.assertIsNotNone(self.api.photos[-1][3])
 
-    def test_future_long_description_is_not_truncated(self):
-        heading = "1. Пример"
-        description = "Абзац с текстом. " * 200
-        caption, rest = photo_caption(heading, description)
-        self.assertLessEqual(len(caption.encode("utf-16-le")) // 2, 1024)
-        self.assertEqual(caption.removeprefix(heading + "\n\n") + rest, description)
+    def test_future_long_description_stays_one_card(self):
+        stop = copy.copy(self.route["stops"][0])
+        stop["description"] = "Длинный текст. " * 200
+        caption = stop_caption(stop, 0, True)
+        self.assertLessEqual(utf16_length(caption), 1024)
+        self.assertIn("Длинный текст.", caption)
+        self.assertIn("Адрес:", caption)
 
     def test_offset_persists(self):
         self.store.set_offset(123)

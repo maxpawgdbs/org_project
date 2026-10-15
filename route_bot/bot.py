@@ -2,6 +2,7 @@
 
 import logging
 import os
+import re
 import time
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -32,28 +33,54 @@ def chunks(text, limit=MAX_MESSAGE):
         yield text
 
 
-def photo_caption(heading, description):
-    """Keep the complete description with its photo whenever Telegram permits."""
-    caption = f"{heading}\n\n{description}"
-    if len(caption.encode("utf-16-le")) // 2 <= MAX_PHOTO_CAPTION:
-        return caption, ""
-    # Future content may be longer: send the overflow as text, never truncate it.
-    prefix = f"{heading}\n\n"
-    available = MAX_PHOTO_CAPTION - len(prefix.encode("utf-16-le")) // 2
+def utf16_length(value):
+    return len(value.encode("utf-16-le")) // 2
+
+
+def compact_text(value, limit):
+    """Shorten on a sentence or word boundary for a single photo caption."""
+    value = " ".join(value.split())
+    if utf16_length(value) <= limit:
+        return value
     units = 0
-    boundary = 0
-    for char in description:
-        size = len(char.encode("utf-16-le")) // 2
-        if units + size > available:
+    end = 0
+    for char in value:
+        size = utf16_length(char)
+        if units + size > limit - 1:
             break
         units += size
-        boundary += 1
-    split = description.rfind("\n\n", 0, boundary + 1)
-    if split < boundary // 2:
-        split = description.rfind(" ", 0, boundary + 1)
-    if split < boundary // 2:
-        split = boundary
-    return prefix + description[:split], description[split:]
+        end += 1
+    prefix = value[:end]
+    sentence_ends = [match.end() for match in re.finditer(r"[.!?](?=\s|$)", prefix)]
+    if sentence_ends:
+        return prefix[:sentence_ends[-1]]
+    boundary = prefix.rfind(" ")
+    if boundary >= end * 0.55:
+        prefix = prefix[:boundary]
+    return prefix.rstrip(" ,;:") + "…"
+
+
+def stop_caption(stop, index, has_next):
+    """One concise card with every essential field under Telegram's photo limit."""
+    heading = f"{index + 1}. {stop['title']}"
+    details = ["На что обратить внимание: " + compact_text(stop.get("card_look_for") or stop["look_for"], 130)]
+    if stop["task"]:
+        details.append("Задание: " + compact_text(stop["task"], 115))
+    details.append("Адрес: " + compact_text(stop["address"], 130))
+    if stop.get("visit_info"):
+        details.append("Осмотр: " + compact_text(stop["visit_info"], 85))
+    if has_next and stop["next_transition"]:
+        details.append("Далее: " + compact_text(stop["next_transition"], 150))
+    if stop["photo_credit"]:
+        details.append(compact_text(stop["photo_credit"], 100))
+    tail = "\n\n" + "\n".join(details)
+    description_limit = MAX_PHOTO_CAPTION - utf16_length(heading + "\n\n" + tail)
+    if description_limit < 100:
+        raise ValueError(f"Stop {stop['id']} has too much text for one photo caption")
+    caption = heading + "\n\n" + compact_text(stop["description"], description_limit) + tail
+    if utf16_length(caption) > MAX_PHOTO_CAPTION:
+        raise ValueError(f"Stop {stop['id']} exceeds Telegram's photo caption limit")
+    return caption
 
 
 def button(label, action=None, url=None):
@@ -150,38 +177,7 @@ class RouteBot:
         self.store.visit(user_id, stop["id"])
         photo_path = stop["_photo_path"]
         photo_ok = False
-        heading = f"{index + 1}. {stop['title']}"
-        caption, remaining_description = photo_caption(heading, stop["description"])
-        if photo_path and photo_path.is_file():
-            try:
-                self.api.send_photo(chat_id, photo_path, caption)
-                photo_ok = True
-            except (BotAPIError, OSError) as exc:
-                LOG.warning("Photo unavailable: %s", type(exc).__name__)
-        if not photo_ok and stop.get("photo_url"):
-            try:
-                self.api.send_photo(chat_id, stop["photo_url"], caption)
-                photo_ok = True
-            except BotAPIError as exc:
-                LOG.warning("Remote photo unavailable: %s", type(exc).__name__)
-        lines = []
-        if photo_ok:
-            if remaining_description:
-                lines.extend([remaining_description.strip(), ""])
-        else:
-            lines.extend([heading, "", stop["description"], ""])
-        lines.extend(["На что обратить внимание:", stop["look_for"]])
-        if stop["task"]:
-            lines.extend(["", "Вопрос или задание:", stop["task"]])
-        lines.extend(["", "Адрес:", stop["address"]])
-        if stop.get("visit_info"):
-            lines.extend(["", "Место осмотра и доступ:", stop["visit_info"]])
-        if stop["photo_credit"]:
-            lines.extend(["", stop["photo_credit"]])
-        if not photo_ok:
-            lines.extend(["", "Фото временно недоступно."])
-        if index + 1 < len(self.stops) and stop["next_transition"]:
-            lines.extend(["", "Переход к следующей остановке:", stop["next_transition"]])
+        caption = stop_caption(stop, index, index + 1 < len(self.stops))
         rows = []
         location = point_url(stop)
         if location:
@@ -196,10 +192,23 @@ class RouteBot:
             navigation.append(button("Далее", f"stop:{index + 1}"))
         if navigation:
             rows.append(navigation)
-        rows.extend([[button("Все остановки", "list:0")], [button("Главное меню", "menu")]])
-        self.send(chat_id, "\n".join(lines), rows)
         if index == len(self.stops) - 1:
-            self.show_finish(chat_id)
+            rows.append([button("Завершить маршрут", "finish")])
+        rows.extend([[button("Все остановки", "list:0")], [button("Главное меню", "menu")]])
+        if photo_path and photo_path.is_file():
+            try:
+                self.api.send_photo(chat_id, photo_path, caption, rows)
+                photo_ok = True
+            except (BotAPIError, OSError) as exc:
+                LOG.warning("Photo unavailable: %s", type(exc).__name__)
+        if not photo_ok and stop.get("photo_url"):
+            try:
+                self.api.send_photo(chat_id, stop["photo_url"], caption, rows)
+                photo_ok = True
+            except BotAPIError as exc:
+                LOG.warning("Remote photo unavailable: %s", type(exc).__name__)
+        if not photo_ok:
+            self.send(chat_id, caption + "\n\nФото временно недоступно.", rows)
 
     def show_sources(self, chat_id, index):
         if not 0 <= index < len(self.stops):

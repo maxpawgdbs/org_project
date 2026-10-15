@@ -25,6 +25,8 @@ class TelegramAPI:
             boundary = "----RouteBot" + uuid.uuid4().hex
             chunks = []
             for key, value in (payload or {}).items():
+                if isinstance(value, (dict, list)):
+                    value = json.dumps(value, ensure_ascii=False)
                 chunks.append(f"--{boundary}\r\nContent-Disposition: form-data; name=\"{key}\"\r\n\r\n{value}\r\n".encode("utf-8"))
             path = Path(photo)
             mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
@@ -52,10 +54,14 @@ class TelegramAPI:
             payload["reply_markup"] = {"inline_keyboard": keyboard}
         return self.call("sendMessage", payload)
 
-    def send_photo(self, chat_id, path, caption):
+    def send_photo(self, chat_id, path, caption, keyboard=None):
+        payload = {"chat_id": chat_id, "caption": caption}
+        if keyboard:
+            payload["reply_markup"] = {"inline_keyboard": keyboard}
         if isinstance(path, str) and path.startswith(("https://", "http://")):
-            return self.call("sendPhoto", {"chat_id": chat_id, "caption": caption, "photo": path})
-        return self.call("sendPhoto", {"chat_id": chat_id, "caption": caption}, photo=path)
+            payload["photo"] = path
+            return self.call("sendPhoto", payload)
+        return self.call("sendPhoto", payload, photo=path)
 
     def answer_callback(self, callback_id, text=""):
         return self.call("answerCallbackQuery", {"callback_query_id": callback_id, "text": text})

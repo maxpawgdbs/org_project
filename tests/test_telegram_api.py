@@ -22,10 +22,13 @@ class TelegramAPITests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmp:
                 path = Path(tmp) / "photo.jpg"
                 path.write_bytes(b"picture-bytes")
-                api.send_photo(1, path, "Остановка")
+                api.send_photo(1, path, "Остановка", [[{"text": "Далее", "callback_data": "stop:1"}]])
         self.assertIn("Привет".encode("utf-8"), requests[0].data)
         self.assertIn(b"picture-bytes", requests[1].data)
         self.assertIn(b'name="photo"', requests[1].data)
+        self.assertIn(b'name="reply_markup"', requests[1].data)
+        self.assertIn("Далее".encode("utf-8"), requests[1].data)
+        self.assertIn(b'"inline_keyboard"', requests[1].data)
         self.assertIn("multipart/form-data", requests[1].get_header("Content-type"))
 
     def test_photo_url_is_sent_as_json(self):
@@ -36,8 +39,11 @@ class TelegramAPITests(unittest.TestCase):
             return io.BytesIO(b'{"ok":true,"result":{"message_id":1}}')
 
         with patch("route_bot.telegram_api.urlopen", fake_urlopen):
-            TelegramAPI("secret-test-token").send_photo(1, "https://example.org/photo.jpg", "Photo")
+            TelegramAPI("secret-test-token").send_photo(
+                1, "https://example.org/photo.jpg", "Photo",
+                [[{"text": "Map", "url": "https://example.org/map"}]])
         self.assertIn(b"https://example.org/photo.jpg", requests[0].data)
+        self.assertIn(b'"inline_keyboard"', requests[0].data)
         self.assertIn("application/json", requests[0].get_header("Content-type"))
 
     def test_http_error_does_not_expose_token(self):
