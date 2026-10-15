@@ -1,9 +1,11 @@
 import copy
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from route_bot.bot import RouteBot, chunks, point_url, stop_caption, utf16_length
+from route_bot.bot import RouteBot, acquire_instance_lock, chunks, point_url, stop_caption, utf16_length
 from route_bot.content import load_route
 from route_bot.storage import ProgressStore
 from route_bot.telegram_api import BotAPIError
@@ -197,6 +199,20 @@ class BotTests(unittest.TestCase):
         self.store.close()
         self.store = ProgressStore(self.db)
         self.assertEqual(self.store.get_offset(), 123)
+
+    def test_second_bot_process_cannot_acquire_lock(self):
+        lock_path = Path(self.tmp.name) / "bot.lock"
+        command = [sys.executable, "-c",
+                   "from route_bot.bot import acquire_instance_lock; import sys; acquire_instance_lock(sys.argv[1]).close()",
+                   str(lock_path)]
+        with acquire_instance_lock(lock_path):
+            second = subprocess.run(command, cwd=ROUTE_FILE.parents[1],
+                                    capture_output=True, text=True, timeout=10)
+            self.assertNotEqual(second.returncode, 0)
+            self.assertIn("already running", second.stderr)
+        after_release = subprocess.run(command, cwd=ROUTE_FILE.parents[1],
+                                       capture_output=True, text=True, timeout=10)
+        self.assertEqual(after_release.returncode, 0, after_release.stderr)
 
 
 if __name__ == "__main__":

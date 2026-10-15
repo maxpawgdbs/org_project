@@ -381,6 +381,31 @@ def configure_logging(filename):
     LOG.setLevel(logging.INFO)
 
 
+def acquire_instance_lock(filename):
+    """Allow only one polling process from this project directory."""
+    path = Path(filename)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lock_file = path.open("a+b")
+    try:
+        if os.name == "nt":
+            import msvcrt
+
+            lock_file.seek(0)
+            if not lock_file.read(1):
+                lock_file.write(b"\0")
+                lock_file.flush()
+            lock_file.seek(0)
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        lock_file.close()
+        raise SystemExit("Bot is already running in this project directory.") from None
+    return lock_file
+
+
 def main():
     load_local_env()
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -390,6 +415,7 @@ def main():
     route_file = os.environ.get("ROUTE_FILE", str(base / "content" / "route.json"))
     db_file = os.environ.get("DATABASE_FILE", str(base / "data" / "progress.sqlite3"))
     log_file = os.environ.get("LOG_FILE", str(base / "data" / "bot.log"))
+    instance_lock = acquire_instance_lock(base / "data" / "bot.lock")
     configure_logging(log_file)
     route = load_route(route_file, os.environ.get("ALLOW_PLACEHOLDERS") == "1")
     store = ProgressStore(db_file)
@@ -412,6 +438,7 @@ def main():
         LOG.info("Bot stopped")
     finally:
         store.close()
+        instance_lock.close()
 
 
 if __name__ == "__main__":
