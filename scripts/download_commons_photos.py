@@ -11,7 +11,7 @@ from pathlib import Path
 FILES = [
     "Белорусский вокзал. декабрь 2024.jpg",
     "Moscow MiusskoeTramDepot 1687.jpg",
-    "Moscow BakhmetevskyGarage 191 8187.jpg",
+    "Moscow, Obraztsova 11 garage from Novosuchevsky Aug 2008 02.JPG",
     "Moscow, Triumfalnaya Square immediately after the 2016 reconstruction (31391621615).jpg",
     "Tverskaya13 Moscow 06-2015.jpg",
     "7244. Bolshoy Kamenny Bridge across the Moskva River.jpg",

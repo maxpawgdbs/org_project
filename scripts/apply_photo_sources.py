@@ -23,6 +23,8 @@ def main():
         deduplicated = []
         known = set()
         for source in stop["sources"]:
+            if source["title"] in {"Страница фотографии", "Лицензия фотографии"}:
+                continue
             normalized = source["url"].rstrip("/")
             if normalized not in known:
                 deduplicated.append(source)

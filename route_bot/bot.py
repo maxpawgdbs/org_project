@@ -14,6 +14,7 @@ from .telegram_api import BotAPIError, TelegramAPI
 
 
 MAX_MESSAGE = 2000  # Safe even if emoji count as two UTF-16 units.
+MAX_PHOTO_CAPTION = 1024  # Telegram Bot API limit, measured in UTF-16 units.
 LOG = logging.getLogger("route_bot")
 
 
@@ -29,6 +30,30 @@ def chunks(text, limit=MAX_MESSAGE):
         text = text[boundary:]
     if text:
         yield text
+
+
+def photo_caption(heading, description):
+    """Keep the complete description with its photo whenever Telegram permits."""
+    caption = f"{heading}\n\n{description}"
+    if len(caption.encode("utf-16-le")) // 2 <= MAX_PHOTO_CAPTION:
+        return caption, ""
+    # Future content may be longer: send the overflow as text, never truncate it.
+    prefix = f"{heading}\n\n"
+    available = MAX_PHOTO_CAPTION - len(prefix.encode("utf-16-le")) // 2
+    units = 0
+    boundary = 0
+    for char in description:
+        size = len(char.encode("utf-16-le")) // 2
+        if units + size > available:
+            break
+        units += size
+        boundary += 1
+    split = description.rfind("\n\n", 0, boundary + 1)
+    if split < boundary // 2:
+        split = description.rfind(" ", 0, boundary + 1)
+    if split < boundary // 2:
+        split = boundary
+    return prefix + description[:split], description[split:]
 
 
 def button(label, action=None, url=None):
@@ -126,20 +151,26 @@ class RouteBot:
         photo_path = stop["_photo_path"]
         photo_ok = False
         heading = f"{index + 1}. {stop['title']}"
+        caption, remaining_description = photo_caption(heading, stop["description"])
         if photo_path and photo_path.is_file():
             try:
-                self.api.send_photo(chat_id, photo_path, heading[:400])
+                self.api.send_photo(chat_id, photo_path, caption)
                 photo_ok = True
             except (BotAPIError, OSError) as exc:
                 LOG.warning("Photo unavailable: %s", type(exc).__name__)
         if not photo_ok and stop.get("photo_url"):
             try:
-                self.api.send_photo(chat_id, stop["photo_url"], heading[:400])
+                self.api.send_photo(chat_id, stop["photo_url"], caption)
                 photo_ok = True
             except BotAPIError as exc:
                 LOG.warning("Remote photo unavailable: %s", type(exc).__name__)
-        lines = [heading, "", stop["description"], "",
-                 "На что обратить внимание:", stop["look_for"]]
+        lines = []
+        if photo_ok:
+            if remaining_description:
+                lines.extend([remaining_description.strip(), ""])
+        else:
+            lines.extend([heading, "", stop["description"], ""])
+        lines.extend(["На что обратить внимание:", stop["look_for"]])
         if stop["task"]:
             lines.extend(["", "Вопрос или задание:", stop["task"]])
         lines.extend(["", "Адрес:", stop["address"]])
